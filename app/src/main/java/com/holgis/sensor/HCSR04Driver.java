@@ -14,21 +14,17 @@
  * limitations under the License.
  */
 
-package com.holgis.range;
+package com.holgis.sensor;
 
 import android.hardware.Sensor;
-import android.util.Log;
 
 import com.google.android.things.userdriver.UserDriverManager;
 import com.google.android.things.userdriver.UserSensor;
 import com.google.android.things.userdriver.UserSensorDriver;
 import com.google.android.things.userdriver.UserSensorReading;
+import com.holgis.sensor.filter.IDistanceFilter;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
 
 
 public class HCSR04Driver implements AutoCloseable {
@@ -46,9 +42,9 @@ public class HCSR04Driver implements AutoCloseable {
 
     private String mTrigger = null;
     private String mEcho = null;
-    private DistanceFilter mFilter;
+    private IDistanceFilter mFilter;
 
-    public HCSR04Driver(String gpioTrigger, String gpioEcho, DistanceFilter filter) {
+    public HCSR04Driver(String gpioTrigger, String gpioEcho, IDistanceFilter filter) {
         mTrigger = gpioTrigger;
         mEcho = gpioEcho;
         mFilter = filter;
@@ -79,27 +75,30 @@ public class HCSR04Driver implements AutoCloseable {
         private UserSensor mUserSensor;
         private HCSR04 mHCSR04 = null;
         private float mDistance = 0.0f;
-        private DistanceFilter mFilter = null;
+        private IDistanceFilter mFilter = null;
 
-        public DistanceUserDriver(String gpioTrigger, String gpioEcho, DistanceFilter filter) throws  IOException {
+        public DistanceUserDriver(String gpioTrigger, String gpioEcho, IDistanceFilter filter) throws  IOException {
             mFilter = filter;
             mHCSR04 = new HCSR04(gpioTrigger, gpioEcho);
-            mHCSR04.SetOnDistanceListener(new HCSR04.OnDistanceListener() {
-                @Override
-                public void OnDistance(float distance) {
-                    if(mFilter != null) {
-                        mDistance = mFilter.filter(distance);
-                    } else {
-                        mDistance = distance;
-                    }
-                }
-            });
+            mHCSR04.SetOnDistanceListener(mOnDistanceListener);
         }
 
         public void close() throws IOException {
+            mHCSR04.RemoveOnDistanceListener(mOnDistanceListener);
             mHCSR04.close();
         }
 
+        private HCSR04.OnDistanceListener mOnDistanceListener = new HCSR04.OnDistanceListener() {
+            @Override
+            public void OnDistance(float distance) {
+                if(mFilter != null) {
+                    mDistance = mFilter.filter(distance);
+                } else {
+                    mDistance = distance;
+                }
+            }
+        };
+        
         private UserSensor getUserSensor() {
             if (mUserSensor == null) {
                 mUserSensor = UserSensor.builder()
@@ -131,54 +130,7 @@ public class HCSR04Driver implements AutoCloseable {
         }
     }
 
-    public interface DistanceFilter {
-        float filter(float distance);
-    }
 
-    //mixture of 'simple moving median' and 'moving average'
-    //by using a moving window and then averaging the values in the middle of the window
-    static public class SimpleEchoFilter implements DistanceFilter {
 
-        private static final int FILER_WINDOW_= 3;
-        private static final int FILER_UPPER_CUTOFF = 2;
-        private static final int FILER_LOWER_CUTOFF = 0;
 
-        private List<Float> distanceEchos = new LinkedList<>();
-
-        public float filter(float value) {
-            float filtered = 0.0f;
-
-            if(distanceEchos.size() >= FILER_WINDOW_){
-                distanceEchos.remove(0);
-            }
-            distanceEchos.add(new Float(value));
-
-            List<Float> sortedEchos = new ArrayList<>(distanceEchos);
-            Collections.sort(sortedEchos);
-
-            if(sortedEchos.size() > (FILER_LOWER_CUTOFF + FILER_UPPER_CUTOFF)) {
-                filtered = average(sortedEchos,
-                        FILER_LOWER_CUTOFF, sortedEchos.size() - FILER_UPPER_CUTOFF);
-            } else {
-                filtered = average(sortedEchos, 0, sortedEchos.size());
-            }
-
-            Log.d(TAG, "Filtered: " +
-                    String.format("%d; %.2f", System.currentTimeMillis(), filtered) + " cm");
-
-            return filtered;
-        }
-
-        private float average(List<Float> echos, int begin, int end) {
-            float avg = 0;
-            for(int i = begin; i < end; ++i){
-                avg += echos.get(i).floatValue();
-            }
-            if(end-begin != 0) {
-                return avg / (end - begin);
-            } else {
-                return avg;
-            }
-        }
-    }
 }

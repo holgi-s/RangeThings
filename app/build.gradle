@@ -48,5 +48,4 @@ android {
 
 dependencies {
     provided 'com.google.android.things:androidthings:0.1-devpreview'
-    compile 'com.google.android.gms:play-services-nearby:10.0.1'
 }

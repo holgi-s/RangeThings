@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-package com.holgis.range;
+package com.holgis.sensor;
 
 
+import android.os.Handler;
 import android.util.Log;
 
 import com.google.android.things.pio.Gpio;
@@ -24,6 +25,8 @@ import com.google.android.things.pio.GpioCallback;
 import com.google.android.things.pio.PeripheralManagerService;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -35,10 +38,11 @@ public class HCSR04 implements AutoCloseable {
     private Gpio mTriggerPin;
     private Gpio mEchoPin;
 
-    private Timer mTimer;
+    private Handler mHandler;
 
     private float mDistance;
     private long mTriggerTime;
+
 
     public HCSR04(String triggerPin, String echoPin) throws IOException {
 
@@ -55,6 +59,8 @@ public class HCSR04 implements AutoCloseable {
         mEchoPin.setEdgeTriggerType(Gpio.EDGE_BOTH);
         mEchoPin.registerGpioCallback(mGpioCallback);
 
+        mHandler = new Handler();
+
         Resume();
     }
 
@@ -62,7 +68,7 @@ public class HCSR04 implements AutoCloseable {
     @Override
     public void close() throws IOException {
 
-        mTimer.cancel();
+        mHandler.removeCallbacks(mTrigger);
 
         mTriggerPin.close();
         mTriggerPin = null;
@@ -73,64 +79,60 @@ public class HCSR04 implements AutoCloseable {
 
     public void Pause() throws IOException {
 
-        if(mTimer != null) {
-            mTimer.cancel();
-        }
+        mHandler.removeCallbacks(mTrigger);
 
-        mTimer = null;
     }
 
     public void Resume() {
 
-        if(mTimer != null) {
-            mTimer.cancel();
-        }
+        mHandler.removeCallbacks(mTrigger);
 
         mTriggerTime = System.nanoTime();
 
-        mTimer = new Timer();
-        mTimer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                trigger();
-            }
-
-        }, 0, 100);
+        mTrigger.run();
     }
 
     public interface OnDistanceListener {
         void OnDistance(float distance);
     }
-    private OnDistanceListener mOnDistanceReading;
+
+    private List<OnDistanceListener> mOnDistanceReadings = new ArrayList<>();
 
     public void SetOnDistanceListener(OnDistanceListener onDistance) {
-        mOnDistanceReading = onDistance;
+        mOnDistanceReadings.add(onDistance);
     }
 
+    public void RemoveOnDistanceListener(OnDistanceListener onDistance) {
+        mOnDistanceReadings.remove(onDistance);
+    }
+
+    @SuppressWarnings("unused")
     public float GetDistance(){
         return mDistance;
     }
 
-    private Runnable mTriggerRunnable = new Runnable() {
+    private Runnable mTrigger = new Runnable() {
         @Override
         public void run() {
             try {
-                mTriggerPin.setValue(true);
-                Thread.sleep(0, 10 * 1000);  //10 µs pulse
-                mTriggerPin.setValue(false);
-            } catch (IOException e) {
-                Log.e(TAG, e.getMessage(), e);
-            } catch (InterruptedException e) {
-                Log.e(TAG, e.getMessage(), e);
-            } catch (NullPointerException e) {
-                Log.e(TAG, e.getMessage(), e);
+                try {
+                    mTriggerPin.setValue(true);
+                    Thread.sleep(0, 10 * 1000);  //10 µs pulse
+                    mTriggerPin.setValue(false);
+                } catch (IOException e) {
+                    Log.e(TAG, e.getMessage(), e);
+                } catch (InterruptedException e) {
+                    Log.e(TAG, e.getMessage(), e);
+                } catch (NullPointerException e) {
+                    Log.e(TAG, e.getMessage(), e);
+                }
+            } finally {
+                // 100% guarantee that this always happens, even if
+                // your update method throws an exception
+                mHandler.postDelayed(mTrigger, 100);
             }
         }
     };
-
-    private void trigger() {
-         mTriggerRunnable.run();
-    }
 
     private GpioCallback mGpioCallback = new GpioCallback() {
         @Override
@@ -169,8 +171,8 @@ public class HCSR04 implements AutoCloseable {
 
             Log.d(TAG, "Distance: " + String.format("%.2f", centimeter) + " cm");
 
-            if(mOnDistanceReading!=null){
-                mOnDistanceReading.OnDistance(mDistance);
+            for(OnDistanceListener listener : mOnDistanceReadings) {
+                listener.OnDistance(mDistance);
             }
         }
     }

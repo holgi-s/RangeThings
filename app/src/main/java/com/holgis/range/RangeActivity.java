@@ -25,6 +25,10 @@ import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.TextView;
+
+import com.holgis.sensor.HCSR04Driver;
+import com.holgis.sensor.filter.SimpleEchoFilter;
+
 import java.io.IOException;
 
 public class RangeActivity extends Activity implements SensorEventListener {
@@ -44,7 +48,7 @@ public class RangeActivity extends Activity implements SensorEventListener {
 
         distanceView = (TextView) findViewById(R.id.fullscreen_content);
 
-        mHCSR04Driver = new HCSR04Driver("BCM17", "BCM27", new HCSR04Driver.SimpleEchoFilter());
+        mHCSR04Driver = new HCSR04Driver("BCM17", "BCM27", new SimpleEchoFilter());
 
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         mSensorManager.registerDynamicSensorCallback(new SensorCallback());
