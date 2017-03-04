@@ -93,7 +93,7 @@ public class HCSR04 implements AutoCloseable {
     }
 
     public interface OnDistanceListener {
-        void OnDistance(float distance);
+        void OnDistance(float distance_CM);
     }
 
     private List<OnDistanceListener> mOnDistanceReadings = new ArrayList<>();

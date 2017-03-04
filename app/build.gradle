@@ -19,7 +19,7 @@ apply plugin: 'com.android.application'
 android {
 
     compileSdkVersion 24
-    buildToolsVersion '24.0.3'
+    buildToolsVersion '25.0.0'
     defaultConfig {
         applicationId "com.holgis.range"
         minSdkVersion 24
@@ -48,4 +48,8 @@ android {
 
 dependencies {
     provided 'com.google.android.things:androidthings:0.1-devpreview'
+    // Required -- JUnit 4 framework
+    testCompile 'junit:junit:4.12'
+    // Optional -- Mockito framework
+
 }

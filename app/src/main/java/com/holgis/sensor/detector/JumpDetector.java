@@ -17,8 +17,50 @@ package com.holgis.sensor.detector;
 
 public class JumpDetector implements IDetector {
 
-    @Override
-    public boolean detect(float value) {
-        return false;
+    private float minDetection = 5.0f;
+
+    private float minDistance = 0.0f;
+    private float maxDistance = 400.0f;
+
+    private float prevDistance = 0.0f;
+
+    private final boolean up = true;
+    private final boolean down = false;
+
+    private boolean currentDirection = down;
+    private boolean initialDistance = true;
+
+    public void setMinDetection(float minJumpDistance){
+        minDetection = minJumpDistance;
+    }
+
+    public boolean detect(float curDistance) {
+        boolean detected  = false;
+        if(initialDistance){
+            maxDistance = minDistance = prevDistance = curDistance;
+            initialDistance = false;
+        }
+        if(currentDirection == down) {
+            if(curDistance > prevDistance) {
+                currentDirection = up;
+                minDistance = prevDistance;
+                // change to up
+            } else if(curDistance < prevDistance) {
+                //continue down
+            }
+        } else { //currentDirection == up
+            if(curDistance > prevDistance) {
+                //continue up
+            } else if(curDistance < prevDistance) {
+                //change to down
+                currentDirection = down;
+                maxDistance = prevDistance;
+                if(maxDistance - minDistance > minDetection){
+                    detected = true;
+                }
+            }
+        }
+        prevDistance = curDistance;
+        return detected;
     }
 }
