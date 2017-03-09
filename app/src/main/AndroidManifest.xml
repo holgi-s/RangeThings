@@ -30,7 +30,7 @@
 
         <uses-library android:name="com.google.android.things"/>
 
-        <activity android:name="com.holgis.range.RangeActivity">
+        <activity android:name="com.holgis.range.JumpActivity">
 
             <!-- Launch activity automatically on boot -->
             <intent-filter>

@@ -43,3 +43,4 @@ captures/
 .externalNativeBuild
 
 .DS_Store
+*.crt

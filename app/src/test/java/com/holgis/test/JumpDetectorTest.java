@@ -24,7 +24,7 @@ import static org.junit.Assert.assertTrue;
 public class JumpDetectorTest {
 
     @Test
-    public void JumpSequenceTest() {
+    public void jumpSequenceTest() {
 
         JumpDetector jd = new JumpDetector();
 
