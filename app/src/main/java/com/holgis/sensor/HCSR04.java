@@ -169,7 +169,7 @@ public class HCSR04 implements AutoCloseable {
             float centimeter = meter * 100.f; //[cm]
             mDistance = centimeter;
 
-            Log.d(TAG, "Distance: " + String.format("%.2f", centimeter) + " cm");
+            //Log.v(TAG, "Distance: " + String.format("%.2f", centimeter) + " cm");
 
             for(OnDistanceListener listener : mOnDistanceReadings) {
                 listener.OnDistance(mDistance);

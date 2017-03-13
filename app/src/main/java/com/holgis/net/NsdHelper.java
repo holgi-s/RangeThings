@@ -26,6 +26,9 @@ public class NsdHelper {
     private NsdManager.RegistrationListener mRegistrationListener = null;
     private String mServiceName;
 
+    public static final String SERVICE_TYPE = "_distance._tcp.";
+    public static final String SERVICE_NAME = "DistanceService";
+
     public  NsdHelper(Context context){
 
         mNsdManager = (NsdManager) context.getSystemService(Context.NSD_SERVICE);
@@ -38,8 +41,8 @@ public class NsdHelper {
 
         // The name is subject to change based on conflicts
         // with other services advertised on the same network.
-        serviceInfo.setServiceName("DistanceService");
-        serviceInfo.setServiceType("distance._tcp");
+        serviceInfo.setServiceName(SERVICE_NAME);
+        serviceInfo.setServiceType(SERVICE_TYPE);
         serviceInfo.setPort(port);
 
         mNsdManager.registerService(

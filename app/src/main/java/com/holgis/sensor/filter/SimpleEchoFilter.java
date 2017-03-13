@@ -54,8 +54,8 @@ public class SimpleEchoFilter implements IDistanceFilter {
             filtered = average(sortedEchos, 0, sortedEchos.size());
         }
 
-        Log.d(TAG, "Filtered: " +
-                String.format("%d; %.2f", System.currentTimeMillis(), filtered) + " cm");
+        //Log.v(TAG, "Filtered: " +
+        //        String.format("%d; %.2f", System.currentTimeMillis(), filtered) + " cm");
 
         return filtered;
     }

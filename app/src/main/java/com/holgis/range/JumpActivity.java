@@ -21,6 +21,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.TextView;
 
+import com.holgis.net.NetServer;
 import com.holgis.sensor.HCSR04;
 import com.holgis.sensor.detector.JumpDetector;
 import com.holgis.sensor.filter.SimpleEchoFilter;
@@ -39,6 +40,8 @@ public class JumpActivity extends Activity implements HCSR04.OnDistanceListener 
 
     TextView distanceView = null;
 
+    NetServer mServer = null;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -46,12 +49,17 @@ public class JumpActivity extends Activity implements HCSR04.OnDistanceListener 
         setContentView(R.layout.activity_range);
         distanceView = (TextView) findViewById(R.id.fullscreen_content);
 
+
+
         try {
             mSensor = new HCSR04("BCM17", "BCM27");
             mFilter = new SimpleEchoFilter();
             mDetector = new JumpDetector();
             mDetector.setMinDetection(5.0f); //cm
             mSensor.SetOnDistanceListener(this);
+
+            mServer = new NetServer();
+            mServer.startServer(this, 9786);
         }
         catch(Exception e) {
             Log.e(TAG, e.getMessage());
@@ -60,6 +68,10 @@ public class JumpActivity extends Activity implements HCSR04.OnDistanceListener 
 
     @Override
     protected void onDestroy() {
+
+        if(mSensor!=null) {
+            mServer.stopServer();
+        }
         if(mSensor!=null) {
             mSensor.RemoveOnDistanceListener(this);
         }
@@ -87,10 +99,16 @@ public class JumpActivity extends Activity implements HCSR04.OnDistanceListener 
 
     @Override
     public void OnDistance(float distance) {
+
+        mServer.AddMessage(new NetServer.DistanceMessage(distance));
+
         float filteredDistance = mFilter.filter(distance);
         if(mDetector.detect(filteredDistance)){
             ++mJumpCounter;
+
             String txt = String.format("Jump Count: %d", mJumpCounter);
+            Log.d(TAG, "OnDistance: " + txt);
+
             distanceView.setText(txt);
         }
     }

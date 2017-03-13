@@ -68,7 +68,9 @@ public class NetServer {
         try {
 
             mStopServer = true;
-            mMessageReady.signal();
+            mMessageLock.lock();
+                mMessageReady.signal();
+            mMessageLock.unlock();
             mServerSocket.close();
 
         } catch (IOException e) {
@@ -77,13 +79,16 @@ public class NetServer {
     }
 
     public void AddMessage(DistanceMessage message){
+
         synchronized (mMessages){
             mMessages.add(message);
             if(mMessages.size()>100){
-                mMessages.remove((0);
+                mMessages.remove(0);
             }
         }
-        mMessageReady.signal();
+        mMessageLock.lock();
+            mMessageReady.signal();
+        mMessageLock.unlock();
     }
 
 
@@ -150,13 +155,16 @@ public class NetServer {
                 Sink sink = Okio.sink(mSocket);
                 BufferedSink out = Okio.buffer(sink);
 
-                while(mSocket.isConnected()) {
 
+                while(!mSocket.isClosed()) {
+
+                    mMessageLock.lock();
                     mMessageReady.await();
+                    mMessageLock.unlock();
 
                     if(mStopServer) break;
 
-                    if(mSocket.isConnected()){
+                    if(!mSocket.isClosed()){
 
                         boolean isEmpty = false;
                         while(!isEmpty){
@@ -170,15 +178,21 @@ public class NetServer {
                             }
 
                             if(message != null){
-                                out.writeIntLe(0x12345678);
-                                out.writeLongLe(message.Timestamp);
-                                out.writeIntLe(Float.floatToRawIntBits(message.Distance));
-                                out.writeIntLe(0x87654321);
+
+                                out.writeUtf8("Distance: " + message.Distance + "\r\n");
+
+//                                out.writeIntLe(0x12345678);
+//                                out.writeLongLe(message.Timestamp);
+//                                out.writeIntLe(Float.floatToRawIntBits(message.Distance));
+//                                out.writeIntLe(0x87654321);
+
+                                out.flush();
+                            }else {
+                                isEmpty = true;
                             }
                         }
                     }
                 }
-
 
             } catch (Exception e) {
                 Log.e(TAG, "working with mSocket failed: " + e.getMessage());
@@ -192,7 +206,6 @@ public class NetServer {
             catch (IOException e){
                 Log.e(TAG, "mSocket.close failed: " + e.getMessage());
             }
-
         }
     }
 }
