@@ -100,10 +100,12 @@ public class JumpActivity extends Activity implements HCSR04.OnDistanceListener 
     @Override
     public void OnDistance(float distance) {
 
-        mServer.AddMessage(new NetServer.DistanceMessage(distance));
+        float filtered = mFilter.filter(distance);
+        boolean jump = mDetector.detect(filtered);
 
-        float filteredDistance = mFilter.filter(distance);
-        if(mDetector.detect(filteredDistance)){
+        mServer.AddMessage(new NetServer.DistanceMessage(distance, filtered, jump));
+
+        if(jump){
             ++mJumpCounter;
 
             String txt = String.format("Jump Count: %d", mJumpCounter);

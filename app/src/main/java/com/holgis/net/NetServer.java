@@ -3,6 +3,8 @@ package com.holgis.net;
 import android.content.Context;
 import android.util.Log;
 
+import com.google.gson.Gson;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -30,21 +32,25 @@ public class NetServer {
     private Context mContext;
     private boolean mStopServer;
     private ServerSocket mServerSocket;
-    private NsdHelper mNsdHelper;
+    private NsdServer mNsdHelper;
 
     private final Lock mMessageLock = new ReentrantLock();
     private final Condition mMessageReady = mMessageLock.newCondition();
 
     private List<DistanceMessage> mMessages;
 
+    private Gson gson = new Gson();
+
+
     public void startServer(Context context, int port) {
+
 
         mContext = context;
         mStopServer = false;
 
         mMessages = Collections.synchronizedList(new ArrayList<DistanceMessage>());
 
-        mNsdHelper = new NsdHelper(context);
+        mNsdHelper = new NsdServer(context);
 
         try {
 
@@ -93,12 +99,17 @@ public class NetServer {
 
 
     public static class DistanceMessage {
-        public long Timestamp;
-        public float Distance;
+        public int version = 1;
+        public long timestamp;
+        public float distance;
+        public float filtered;
+        public boolean jump;
 
-        public DistanceMessage(float distance){
-            this.Timestamp = System.currentTimeMillis();
-            this.Distance = distance;
+        public DistanceMessage(float distance, float filtered, boolean jump){
+            this.timestamp = System.currentTimeMillis();
+            this.distance = distance;
+            this.filtered = filtered;
+            this.jump = jump;
         }
     }
 
@@ -179,12 +190,9 @@ public class NetServer {
 
                             if(message != null){
 
-                                out.writeUtf8("Distance: " + message.Distance + "\r\n");
-
-//                                out.writeIntLe(0x12345678);
-//                                out.writeLongLe(message.Timestamp);
-//                                out.writeIntLe(Float.floatToRawIntBits(message.Distance));
-//                                out.writeIntLe(0x87654321);
+                                String json = gson.toJson(message);
+                                out.writeUtf8(json);
+                                out.writeUtf8("\n");
 
                                 out.flush();
                             }else {

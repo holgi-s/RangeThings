@@ -20,7 +20,8 @@ import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
 
 
-public class NsdHelper {
+class NsdServer
+{
 
     private NsdManager mNsdManager = null;
     private NsdManager.RegistrationListener mRegistrationListener = null;
@@ -29,7 +30,7 @@ public class NsdHelper {
     public static final String SERVICE_TYPE = "_distance._tcp.";
     public static final String SERVICE_NAME = "DistanceService";
 
-    public  NsdHelper(Context context){
+    public  NsdServer(Context context){
 
         mNsdManager = (NsdManager) context.getSystemService(Context.NSD_SERVICE);
         initializeRegistrationListener();
