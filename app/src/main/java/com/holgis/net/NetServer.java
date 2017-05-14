@@ -3,7 +3,7 @@ package com.holgis.net;
 import android.content.Context;
 import android.util.Log;
 
-import com.google.gson.Gson;
+import com.holgis.data.DistanceMessage;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -15,9 +15,7 @@ import java.util.List;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-
 import javax.net.ServerSocketFactory;
-
 import okio.BufferedSink;
 import okio.Okio;
 import okio.Sink;
@@ -29,26 +27,18 @@ public class NetServer {
 
     public static final String TAG = "NetServer";
     private Thread mThread;
-    private Context mContext;
     private boolean mStopServer;
     private ServerSocket mServerSocket;
     private NsdServer mNsdHelper;
-
     private final Lock mMessageLock = new ReentrantLock();
     private final Condition mMessageReady = mMessageLock.newCondition();
 
-    private List<DistanceMessage> mMessages;
-
-    private Gson gson = new Gson();
+    final private List<DistanceMessage> mMessages = Collections.synchronizedList(new ArrayList<DistanceMessage>());
 
 
     public void startServer(Context context, int port) {
 
-
-        mContext = context;
         mStopServer = false;
-
-        mMessages = Collections.synchronizedList(new ArrayList<DistanceMessage>());
 
         mNsdHelper = new NsdServer(context);
 
@@ -57,7 +47,7 @@ public class NetServer {
             mServerSocket = ServerSocketFactory.getDefault()
                     .createServerSocket(port);
 
-            mThread = new ServerThread(mContext);
+            mThread = new ServerThread();
             mThread.start();
 
             mNsdHelper.registerService(port);
@@ -84,41 +74,23 @@ public class NetServer {
         }
     }
 
-    public void AddMessage(DistanceMessage message){
+    public void addMessage(DistanceMessage message){
 
-        synchronized (mMessages){
+        synchronized (mMessages) {
             mMessages.add(message);
-            if(mMessages.size()>100){
+            if (mMessages.size() > 100) {
                 mMessages.remove(0);
             }
         }
         mMessageLock.lock();
-            mMessageReady.signal();
+        mMessageReady.signal();
         mMessageLock.unlock();
     }
 
 
-    public static class DistanceMessage {
-        public int version = 1;
-        public long timestamp;
-        public float distance;
-        public float filtered;
-        public boolean jump;
-
-        public DistanceMessage(float distance, float filtered, boolean jump){
-            this.timestamp = System.currentTimeMillis();
-            this.distance = distance;
-            this.filtered = filtered;
-            this.jump = jump;
-        }
-    }
-
     private class ServerThread extends Thread {
 
-        private Context mContext;
-
-        public ServerThread(Context context) {
-            mContext = context;
+        public ServerThread() {
         }
 
         @Override
@@ -126,13 +98,12 @@ public class NetServer {
             super.run();
             try {
 
-                Log.d(TAG, "ServerSocket created:" + mServerSocket
-                        .getInetAddress().getHostAddress());
+                Log.d(TAG, "ServerSocket created:" + mServerSocket.getInetAddress().getHostAddress());
 
                 while (!mStopServer) {
                     Socket socket = mServerSocket.accept();
                     if (!mStopServer) {
-                        Worker worker  = new Worker(mContext, socket);
+                        Worker worker  = new Worker(socket);
                         worker.start(); // blocking, and closing socket
                     }
                 }
@@ -148,11 +119,9 @@ public class NetServer {
 
     private class Worker {
 
-        private Context mContext;
         private Socket mSocket;
 
-        public Worker(Context context, Socket socket) {
-            mContext = context;
+        public Worker(Socket socket) {
             mSocket = socket;
         }
 
@@ -160,12 +129,8 @@ public class NetServer {
 
             try {
 
-                //Source source = Okio.source(mSocket);
-                //BufferedSource in = Okio.buffer(source);
-
                 Sink sink = Okio.sink(mSocket);
                 BufferedSink out = Okio.buffer(sink);
-
 
                 while(!mSocket.isClosed()) {
 
@@ -189,10 +154,10 @@ public class NetServer {
                             }
 
                             if(message != null){
+                                byte[] b = message.getBytes();
 
-                                String json = gson.toJson(message);
-                                out.writeUtf8(json);
-                                out.writeUtf8("\n");
+                                out.writeIntLe(b.length);
+                                out.write(b);
 
                                 out.flush();
                             }else {

@@ -117,7 +117,7 @@ public class HCSR04 implements AutoCloseable {
             try {
                 try {
                     mTriggerPin.setValue(true);
-                    Thread.sleep(0, 10 * 1000);  //10 µs pulse
+                    Thread.sleep(0, 5 * 1000);  //min. 10 µs pulse
                     mTriggerPin.setValue(false);
                 } catch (IOException e) {
                     Log.e(TAG, e.getMessage(), e);
@@ -127,9 +127,7 @@ public class HCSR04 implements AutoCloseable {
                     Log.e(TAG, e.getMessage(), e);
                 }
             } finally {
-                // 100% guarantee that this always happens, even if
-                // your update method throws an exception
-                mHandler.postDelayed(mTrigger, 100);
+                mHandler.postDelayed(mTrigger, 50);
             }
         }
     };

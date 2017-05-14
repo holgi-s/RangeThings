@@ -21,6 +21,8 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.TextView;
 
+import com.holgis.ble.GattServer;
+import com.holgis.data.DistanceMessage;
 import com.holgis.net.NetServer;
 import com.holgis.sensor.HCSR04;
 import com.holgis.sensor.detector.JumpDetector;
@@ -41,6 +43,8 @@ public class JumpActivity extends Activity implements HCSR04.OnDistanceListener 
     TextView distanceView = null;
 
     NetServer mServer = null;
+    GattServer mGatt = null;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,17 +53,23 @@ public class JumpActivity extends Activity implements HCSR04.OnDistanceListener 
         setContentView(R.layout.activity_range);
         distanceView = (TextView) findViewById(R.id.fullscreen_content);
 
-
-
         try {
+
             mSensor = new HCSR04("BCM17", "BCM27");
+            mSensor.SetOnDistanceListener(this);
+
             mFilter = new SimpleEchoFilter();
+
             mDetector = new JumpDetector();
             mDetector.setMinDetection(5.0f); //cm
-            mSensor.SetOnDistanceListener(this);
 
             mServer = new NetServer();
             mServer.startServer(this, 9786);
+
+            if(GattServer.checkBluetooth(this)) {
+                mGatt = new GattServer(this);
+            }
+
         }
         catch(Exception e) {
             Log.e(TAG, e.getMessage());
@@ -74,6 +84,9 @@ public class JumpActivity extends Activity implements HCSR04.OnDistanceListener 
         }
         if(mSensor!=null) {
             mSensor.RemoveOnDistanceListener(this);
+        }
+        if(mGatt!=null){
+            mGatt.close();
         }
         mSensor = null;
         mFilter = null;
@@ -103,7 +116,13 @@ public class JumpActivity extends Activity implements HCSR04.OnDistanceListener 
         float filtered = mFilter.filter(distance);
         boolean jump = mDetector.detect(filtered);
 
-        mServer.AddMessage(new NetServer.DistanceMessage(distance, filtered, jump));
+        DistanceMessage m = new DistanceMessage(distance, filtered, jump);
+
+        mServer.addMessage(m);
+
+        if(mGatt!=null){
+            mGatt.addMessage(m);
+        }
 
         if(jump){
             ++mJumpCounter;

@@ -41,10 +41,8 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
 
             signingConfig signingConfigs.release
-            buildConfigField 'String', 'AZURE_CONNECTION_STRING', AZURE_CONNECTION_STRING
         }
         debug {
-            buildConfigField 'String', 'AZURE_CONNECTION_STRING', AZURE_CONNECTION_STRING
         }
     }
 
@@ -52,9 +50,7 @@ android {
 
 dependencies {
     provided 'com.google.android.things:androidthings:0.1-devpreview'
-    // Required -- JUnit 4 framework
     testCompile 'junit:junit:4.12'
-    // Optional -- Mockito framework
 }
 
 repositories {
@@ -63,10 +59,8 @@ repositories {
 
 dependencies {
     provided 'com.google.android.things:androidthings:0.1-devpreview'
-    // Required -- JUnit 4 framework
     testCompile 'junit:junit:4.12'
-    // Optional -- Mockito framework
 
     compile 'com.squareup.okio:okio:1.11.0'
-    compile 'com.google.code.gson:gson:2.8.0'
+
 }
